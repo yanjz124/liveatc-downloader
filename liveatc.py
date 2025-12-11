@@ -52,8 +52,10 @@ def download_archive(station, date, time):
   soup = BeautifulSoup(page.content, 'html.parser')
   archive_identifer = soup.find('option', selected=True).attrs['value']
 
-  # Extract airport code from station identifier (e.g., 'kcho3_zdc_121675' -> 'kcho3')
-  airport_code = station.split('_')[0]
+  # Extract airport code from station identifier (e.g., 'kcho3_zdc_121675' -> 'kcho')
+  # Remove trailing digits from the first part of the station identifier
+  station_prefix = station.split('_')[0]
+  airport_code = re.sub(r'\d+$', '', station_prefix)
   
   # https://archive.liveatc.net/kpdx/KPDX-App-Dep-Oct-01-2021-0000Z.mp3
   filename = f'{archive_identifer}-{date}-{time}.mp3'

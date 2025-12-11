@@ -95,7 +95,8 @@ class LiveATCDownloaderGUI:
         ttk.Label(time_frame, text="Start:").grid(row=0, column=0, sticky=tk.W, padx=(0, 5))
         self.start_date_entry = ttk.Entry(time_frame, width=15)
         self.start_date_entry.grid(row=0, column=1, padx=(0, 5))
-        self.start_date_entry.insert(0, datetime.utcnow().strftime('%b-%d-%Y'))
+        from datetime import timezone
+        self.start_date_entry.insert(0, datetime.now(timezone.utc).strftime('%b-%d-%Y'))
         
         self.start_time_entry = ttk.Entry(time_frame, width=10)
         self.start_time_entry.grid(row=0, column=2, padx=(0, 15))
