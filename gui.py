@@ -90,36 +90,51 @@ class LiveATCDownloaderGUI:
         row += 1
         time_frame = ttk.Frame(main_frame)
         time_frame.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
-        
+
+        from datetime import timezone
+        current_time = datetime.now(timezone.utc)
+
         # Start time
         ttk.Label(time_frame, text="Start:").grid(row=0, column=0, sticky=tk.W, padx=(0, 5))
         self.start_date_entry = ttk.Entry(time_frame, width=15)
         self.start_date_entry.grid(row=0, column=1, padx=(0, 5))
-        from datetime import timezone
-        self.start_date_entry.insert(0, datetime.now(timezone.utc).strftime('%b-%d-%Y'))
-        
-        self.start_time_entry = ttk.Entry(time_frame, width=10)
-        self.start_time_entry.grid(row=0, column=2, padx=(0, 15))
-        self.start_time_entry.insert(0, '0000Z')
-        
+        self.start_date_entry.insert(0, current_time.strftime('%b-%d-%Y'))
+
+        # Start time - Hour dropdown
+        self.start_hour = ttk.Combobox(time_frame, width=4, values=[f"{h:02d}" for h in range(24)], state='readonly')
+        self.start_hour.grid(row=0, column=2, padx=(0, 2))
+        self.start_hour.set('00')
+
+        # Start time - Minute dropdown
+        self.start_minute = ttk.Combobox(time_frame, width=4, values=['00', '30'], state='readonly')
+        self.start_minute.grid(row=0, column=3, padx=(0, 2))
+        self.start_minute.set('00')
+
+        ttk.Label(time_frame, text="Z").grid(row=0, column=4, sticky=tk.W, padx=(0, 15))
+
         # End time
-        ttk.Label(time_frame, text="End:").grid(row=0, column=3, sticky=tk.W, padx=(0, 5))
+        ttk.Label(time_frame, text="End:").grid(row=0, column=5, sticky=tk.W, padx=(0, 5))
         self.end_date_entry = ttk.Entry(time_frame, width=15)
-        self.end_date_entry.grid(row=0, column=4, padx=(0, 5))
-        from datetime import timezone
-        current_time = datetime.now(timezone.utc)
+        self.end_date_entry.grid(row=0, column=6, padx=(0, 5))
         self.end_date_entry.insert(0, current_time.strftime('%b-%d-%Y'))
 
-        self.end_time_entry = ttk.Entry(time_frame, width=10)
-        self.end_time_entry.grid(row=0, column=5)
-        # Round to nearest 30 min
+        # End time - Hour dropdown
         minutes = (current_time.minute // 30) * 30
         rounded_time = current_time.replace(minute=minutes, second=0, microsecond=0)
-        self.end_time_entry.insert(0, rounded_time.strftime('%H%MZ'))
-        
+        self.end_hour = ttk.Combobox(time_frame, width=4, values=[f"{h:02d}" for h in range(24)], state='readonly')
+        self.end_hour.grid(row=0, column=7, padx=(0, 2))
+        self.end_hour.set(f"{rounded_time.hour:02d}")
+
+        # End time - Minute dropdown
+        self.end_minute = ttk.Combobox(time_frame, width=4, values=['00', '30'], state='readonly')
+        self.end_minute.grid(row=0, column=8, padx=(0, 2))
+        self.end_minute.set(f"{rounded_time.minute:02d}")
+
+        ttk.Label(time_frame, text="Z").grid(row=0, column=9, sticky=tk.W)
+
         # Format help
         row += 1
-        ttk.Label(main_frame, text="Format: Date (Dec-11-2025), Time (1430Z)", 
+        ttk.Label(main_frame, text="Date format: Dec-11-2025  |  Time is in UTC/Zulu (24-hour)",
                  foreground='gray', font=('Arial', 8)).grid(
             row=row, column=0, columnspan=2, sticky=tk.W, pady=(0, 10))
         
@@ -298,13 +313,13 @@ class LiveATCDownloaderGUI:
         station = self.stations_data[selection[0]]
 
         start_date = self.start_date_entry.get().strip()
-        start_time = self.start_time_entry.get().strip()
+        start_time = f"{self.start_hour.get()}{self.start_minute.get()}Z"
         end_date = self.end_date_entry.get().strip()
-        end_time = self.end_time_entry.get().strip()
+        end_time = f"{self.end_hour.get()}{self.end_minute.get()}Z"
         output_folder = self.output_entry.get().strip()
         delay_str = self.delay_entry.get().strip()
 
-        if not all([start_date, start_time, end_date, end_time, output_folder, delay_str]):
+        if not all([start_date, end_date, output_folder, delay_str]):
             messagebox.showwarning("Input Required", "Please fill in all fields")
             return
 

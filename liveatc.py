@@ -93,8 +93,13 @@ def download_archive(station, date, time):
         import urllib3
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+        # Use browser User-Agent to avoid being blocked
+        headers = {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+        }
+
         # Try without SSL verification since archive.liveatc.net has issues
-        response = requests.get(url, timeout=30, stream=True, verify=False)
+        response = requests.get(url, timeout=30, stream=True, verify=False, headers=headers)
         response.raise_for_status()
 
         # Write the file in chunks
