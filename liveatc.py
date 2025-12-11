@@ -60,7 +60,10 @@ def download_archive(station, date, time):
   # https://archive.liveatc.net/kpdx/KPDX-App-Dep-Oct-01-2021-0000Z.mp3
   filename = f'{archive_identifer}-{date}-{time}.mp3'
 
-  path = f'/tmp/{filename}'
+  # Use system temp directory (cross-platform)
+  import tempfile
+  temp_dir = tempfile.gettempdir()
+  path = os.path.join(temp_dir, filename)
   url = f'https://archive.liveatc.net/{airport_code}/{filename}'
   
   import time as time_module

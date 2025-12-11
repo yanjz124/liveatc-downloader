@@ -7,6 +7,12 @@ import threading
 from liveatc import get_stations, download_archive
 import os
 
+try:
+    from tkcalendar import DateEntry
+    HAVE_CALENDAR = True
+except ImportError:
+    HAVE_CALENDAR = False
+
 
 class LiveATCDownloaderGUI:
     def __init__(self, root):
@@ -96,9 +102,18 @@ class LiveATCDownloaderGUI:
 
         # Start time
         ttk.Label(time_frame, text="Start:").grid(row=0, column=0, sticky=tk.W, padx=(0, 5))
-        self.start_date_entry = ttk.Entry(time_frame, width=15)
+
+        if HAVE_CALENDAR:
+            # Use calendar date picker with arrow key navigation
+            self.start_date_entry = DateEntry(time_frame, width=15, background='darkblue',
+                                             foreground='white', borderwidth=2,
+                                             date_pattern='M-dd-yyyy')
+            self.start_date_entry.set_date(current_time)
+        else:
+            # Fallback to text entry
+            self.start_date_entry = ttk.Entry(time_frame, width=15)
+            self.start_date_entry.insert(0, current_time.strftime('%b-%d-%Y'))
         self.start_date_entry.grid(row=0, column=1, padx=(0, 5))
-        self.start_date_entry.insert(0, current_time.strftime('%b-%d-%Y'))
 
         # Start time - Hour dropdown
         self.start_hour = ttk.Combobox(time_frame, width=4, values=[f"{h:02d}" for h in range(24)], state='readonly')
@@ -114,9 +129,18 @@ class LiveATCDownloaderGUI:
 
         # End time
         ttk.Label(time_frame, text="End:").grid(row=0, column=5, sticky=tk.W, padx=(0, 5))
-        self.end_date_entry = ttk.Entry(time_frame, width=15)
+
+        if HAVE_CALENDAR:
+            # Use calendar date picker with arrow key navigation
+            self.end_date_entry = DateEntry(time_frame, width=15, background='darkblue',
+                                           foreground='white', borderwidth=2,
+                                           date_pattern='M-dd-yyyy')
+            self.end_date_entry.set_date(current_time)
+        else:
+            # Fallback to text entry
+            self.end_date_entry = ttk.Entry(time_frame, width=15)
+            self.end_date_entry.insert(0, current_time.strftime('%b-%d-%Y'))
         self.end_date_entry.grid(row=0, column=6, padx=(0, 5))
-        self.end_date_entry.insert(0, current_time.strftime('%b-%d-%Y'))
 
         # End time - Hour dropdown
         minutes = (current_time.minute // 30) * 30
@@ -134,7 +158,8 @@ class LiveATCDownloaderGUI:
 
         # Format help
         row += 1
-        ttk.Label(main_frame, text="Date format: Dec-11-2025  |  Time is in UTC/Zulu (24-hour)",
+        help_text = "Click date to open calendar (use arrow keys to navigate)  |  Time is in UTC/Zulu" if HAVE_CALENDAR else "Date format: Dec-11-2025  |  Time is in UTC/Zulu (24-hour)"
+        ttk.Label(main_frame, text=help_text,
                  foreground='gray', font=('Arial', 8)).grid(
             row=row, column=0, columnspan=2, sticky=tk.W, pady=(0, 10))
         
@@ -312,9 +337,15 @@ class LiveATCDownloaderGUI:
 
         station = self.stations_data[selection[0]]
 
-        start_date = self.start_date_entry.get().strip()
+        # Get dates - handle both DateEntry and regular Entry widgets
+        if HAVE_CALENDAR:
+            start_date = self.start_date_entry.get_date().strftime('%b-%d-%Y')
+            end_date = self.end_date_entry.get_date().strftime('%b-%d-%Y')
+        else:
+            start_date = self.start_date_entry.get().strip()
+            end_date = self.end_date_entry.get().strip()
+
         start_time = f"{self.start_hour.get()}{self.start_minute.get()}Z"
-        end_date = self.end_date_entry.get().strip()
         end_time = f"{self.end_hour.get()}{self.end_minute.get()}Z"
         output_folder = self.output_entry.get().strip()
         delay_str = self.delay_entry.get().strip()
