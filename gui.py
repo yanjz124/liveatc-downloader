@@ -105,11 +105,12 @@ class LiveATCDownloaderGUI:
         ttk.Label(time_frame, text="End:").grid(row=0, column=3, sticky=tk.W, padx=(0, 5))
         self.end_date_entry = ttk.Entry(time_frame, width=15)
         self.end_date_entry.grid(row=0, column=4, padx=(0, 5))
-        self.end_date_entry.insert(0, datetime.utcnow().strftime('%b-%d-%Y'))
-        
+        from datetime import timezone
+        current_time = datetime.now(timezone.utc)
+        self.end_date_entry.insert(0, current_time.strftime('%b-%d-%Y'))
+
         self.end_time_entry = ttk.Entry(time_frame, width=10)
         self.end_time_entry.grid(row=0, column=5)
-        current_time = datetime.utcnow()
         # Round to nearest 30 min
         minutes = (current_time.minute // 30) * 30
         rounded_time = current_time.replace(minute=minutes, second=0, microsecond=0)
@@ -134,9 +135,24 @@ class LiveATCDownloaderGUI:
         self.output_entry = ttk.Entry(output_frame, font=('Arial', 9))
         self.output_entry.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=(0, 5))
         self.output_entry.insert(0, os.path.expanduser('~/Downloads'))
-        
+
         self.browse_btn = ttk.Button(output_frame, text="Browse...", command=self.browse_output)
         self.browse_btn.grid(row=0, column=1)
+
+        # ===== DELAY SETTING =====
+        row += 1
+        delay_frame = ttk.Frame(main_frame)
+        delay_frame.grid(row=row, column=0, columnspan=2, sticky=tk.W, pady=(5, 10))
+
+        ttk.Label(delay_frame, text="Delay between downloads:", font=('Arial', 9)).grid(
+            row=0, column=0, sticky=tk.W, padx=(0, 5))
+
+        self.delay_entry = ttk.Entry(delay_frame, width=8)
+        self.delay_entry.grid(row=0, column=1, padx=(0, 5))
+        self.delay_entry.insert(0, '10')
+
+        ttk.Label(delay_frame, text="seconds (to avoid rate-limiting)",
+                 foreground='gray', font=('Arial', 8)).grid(row=0, column=2, sticky=tk.W)
         
         # ===== DOWNLOAD BUTTONS =====
         row += 1
@@ -277,17 +293,28 @@ class LiveATCDownloaderGUI:
         if not selection or not self.stations_data:
             messagebox.showwarning("No Selection", "Please select a station")
             return
-        
+
         station = self.stations_data[selection[0]]
-        
+
         start_date = self.start_date_entry.get().strip()
         start_time = self.start_time_entry.get().strip()
         end_date = self.end_date_entry.get().strip()
         end_time = self.end_time_entry.get().strip()
         output_folder = self.output_entry.get().strip()
-        
-        if not all([start_date, start_time, end_date, end_time, output_folder]):
+        delay_str = self.delay_entry.get().strip()
+
+        if not all([start_date, start_time, end_date, end_time, output_folder, delay_str]):
             messagebox.showwarning("Input Required", "Please fill in all fields")
+            return
+
+        # Validate delay
+        try:
+            delay = float(delay_str)
+            if delay < 0:
+                messagebox.showwarning("Invalid Delay", "Delay must be a positive number")
+                return
+        except ValueError:
+            messagebox.showwarning("Invalid Delay", "Delay must be a number (e.g., 10)")
             return
         
         # Validate output folder
@@ -324,23 +351,25 @@ class LiveATCDownloaderGUI:
         self.download_cancelled = False
         
         # Start download in background
-        thread = threading.Thread(target=self._download_thread, 
-                                 args=(station, start_datetime, end_datetime, output_folder))
+        thread = threading.Thread(target=self._download_thread,
+                                 args=(station, start_datetime, end_datetime, output_folder, delay))
         thread.daemon = True
         thread.start()
         
-    def _download_thread(self, station, start_datetime, end_datetime, output_folder):
+    def _download_thread(self, station, start_datetime, end_datetime, output_folder, delay):
         """Background thread for downloading"""
+        import time
         current = start_datetime
         downloaded = 0
         failed = 0
-        
+
         total_intervals = int((end_datetime - start_datetime).total_seconds() / 1800)  # 30 min = 1800 sec
-        
+
         self.root.after(0, self.log, f"Starting download for {station['identifier']}")
         self.root.after(0, self.log, f"Time range: {start_datetime} to {end_datetime} UTC")
         self.root.after(0, self.log, f"Total intervals: {total_intervals}")
-        self.root.after(0, self.log, f"Output folder: {output_folder}\n")
+        self.root.after(0, self.log, f"Output folder: {output_folder}")
+        self.root.after(0, self.log, f"Delay between downloads: {delay} seconds\n")
         
         while current <= end_datetime:
             # Check if download was cancelled
@@ -369,14 +398,19 @@ class LiveATCDownloaderGUI:
                 
                 downloaded += 1
                 self.root.after(0, self.log, f"{progress} [OK] {date_str} {time_str} -> {filename}")
-                
+
+                # Add delay after successful download (except for the last one)
+                if current + timedelta(minutes=30) <= end_datetime and delay > 0:
+                    self.root.after(0, self.log, f"  Waiting {delay}s before next download...")
+                    time.sleep(delay)
+
             except Exception as e:
                 failed += 1
                 error_msg = str(e)
                 if len(error_msg) > 100:
                     error_msg = error_msg[:100] + "..."
                 self.root.after(0, self.log, f"{progress} [FAIL] {date_str} {time_str}: {error_msg}")
-            
+
             current += timedelta(minutes=30)
         
         # Summary

@@ -17,6 +17,7 @@ parser_download_range = commands.add_parser('download-range', help='Download MP3
 parser_download_range.add_argument('station', help='Station identifier, e.g. kpdx_app')
 parser_download_range.add_argument('start', help='Start date and time, e.g. Dec-10-2025-0000Z')
 parser_download_range.add_argument('-e', '--end', help='End date and time, e.g. Dec-11-2025-1500Z (defaults to now)')
+parser_download_range.add_argument('-d', '--delay', type=float, default=10.0, help='Delay in seconds between downloads to avoid rate-limiting (default: 10)')
 
 
 

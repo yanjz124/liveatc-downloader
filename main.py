@@ -22,7 +22,8 @@ def stations(args):
 
 
 def download(args):
-  date_now = datetime.utcnow()
+  from datetime import timezone
+  date_now = datetime.now(timezone.utc).replace(tzinfo=None)
 
   last_period = get_last_zulu_period(date_now)
 
@@ -38,35 +39,45 @@ def download(args):
 
 def download_range(args):
   """Download archives for a date/time range"""
+  import time
+
   # Parse start and end times
   start_date = datetime.strptime(args.start, '%b-%d-%Y-%H%MZ')
-  
+
   if args.end:
     end_date = datetime.strptime(args.end, '%b-%d-%Y-%H%MZ')
   else:
-    end_date = datetime.utcnow()
-  
+    from datetime import timezone
+    end_date = datetime.now(timezone.utc).replace(tzinfo=None)
+
   current = start_date
   downloaded_files = []
   failed_files = []
-  
+  delay = args.delay if hasattr(args, 'delay') else 10.0
+
   print(f"Downloading archives from {start_date} to {end_date}")
-  print(f"Station: {args.station}\n")
-  
+  print(f"Station: {args.station}")
+  print(f"Delay between downloads: {delay} seconds\n")
+
   # Download in 30-minute intervals
   while current <= end_date:
     date_str = current.strftime('%b-%d-%Y')
     time_str = current.strftime('%H%MZ')
-    
+
     try:
       filepath = download_archive(args.station, date_str, time_str)
       downloaded_files.append(filepath)
       print(f"[OK] Downloaded {date_str} {time_str}")
+
+      # Add delay after successful download (except for the last one)
+      if current + timedelta(minutes=30) <= end_date and delay > 0:
+        print(f"  Waiting {delay}s before next download...")
+        time.sleep(delay)
     except Exception as e:
       error_msg = str(e)
       failed_files.append((f"{date_str} {time_str}", error_msg))
       print(f"[FAIL] Failed to download {date_str} {time_str}: {error_msg}")
-    
+
     current += timedelta(minutes=30)
   
   print(f"\n=== Summary ===")

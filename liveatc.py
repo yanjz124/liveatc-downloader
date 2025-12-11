@@ -1,24 +1,15 @@
 import re
 import os
-import ssl
 
 import requests
-import urllib.request
 from bs4 import BeautifulSoup
-import certifi
-
-# Create a custom SSL context that uses certifi certificates
-try:
-  ssl_context = ssl.create_default_context(cafile=certifi.where())
-except Exception:
-  ssl_context = None
 
 
 def get_stations(icao):
-  # Try with SSL verification first, fallback to unverified if it fails
+  # Try with default SSL verification first, fallback to unverified if it fails
   try:
-    page = requests.get(f'https://www.liveatc.net/search/?icao={icao}', verify=certifi.where(), timeout=10)
-  except requests.exceptions.SSLError:
+    page = requests.get(f'https://www.liveatc.net/search/?icao={icao}', timeout=10)
+  except (requests.exceptions.SSLError, requests.exceptions.ConnectionError):
     # If SSL verification fails, retry without verification (less secure but works)
     import urllib3
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -49,10 +40,10 @@ def get_stations(icao):
 
 
 def download_archive(station, date, time):
-  # Try with SSL verification first, fallback to unverified if it fails
+  # Try with default SSL verification first, fallback to unverified if it fails
   try:
-    page = requests.get(f'https://www.liveatc.net/archive.php?m={station}', verify=certifi.where(), timeout=10)
-  except requests.exceptions.SSLError:
+    page = requests.get(f'https://www.liveatc.net/archive.php?m={station}', timeout=10)
+  except (requests.exceptions.SSLError, requests.exceptions.ConnectionError):
     # If SSL verification fails, retry without verification (less secure but works)
     import urllib3
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -71,25 +62,63 @@ def download_archive(station, date, time):
   url = f'https://archive.liveatc.net/{airport_code}/{filename}'
   
   import time as time_module
-  import socket
-  
+  import subprocess
+  import sys
+
   # Retry logic with exponential backoff
   max_retries = 3
   for attempt in range(max_retries):
     try:
       print(f"Downloading: {url}")
-      urllib.request.urlretrieve(url, path)
-      return path
-    except (socket.timeout, urllib.error.URLError) as e:
+
+      # Try using curl first (works better with archive.liveatc.net)
+      try:
+        # Use curl if available - it handles archive.liveatc.net better than Python requests
+        result = subprocess.run(
+          ['curl', '-f', '-L', '--max-time', '30', '-o', path, url],
+          capture_output=True,
+          text=True,
+          timeout=35
+        )
+        if result.returncode == 0:
+          return path
+        else:
+          # curl failed, try requests as fallback
+          raise Exception(f"curl failed: {result.stderr}")
+      except (FileNotFoundError, Exception) as curl_error:
+        # curl not available or failed, use requests library
+        print(f"  Trying Python requests (curl unavailable/failed)...")
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+        # Try without SSL verification since archive.liveatc.net has issues
+        response = requests.get(url, timeout=30, stream=True, verify=False)
+        response.raise_for_status()
+
+        # Write the file in chunks
+        with open(path, 'wb') as f:
+          for chunk in response.iter_content(chunk_size=8192):
+            if chunk:
+              f.write(chunk)
+        return path
+
+    except (subprocess.TimeoutExpired, requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
       if attempt < max_retries - 1:
         wait_time = 2 ** attempt  # 1, 2, 4 seconds
         print(f"  Timeout/Connection error, retrying in {wait_time}s...")
         time_module.sleep(wait_time)
       else:
+        raise Exception(f"Failed after {max_retries} attempts: {e}")
+    except (requests.exceptions.HTTPError, Exception) as e:
+      # HTTP errors (like 403, 404) or other errors, don't retry
+      if "404" in str(e) or "403" in str(e):
         raise
-    except Exception as e:
-      # Other errors (like 403), don't retry
-      raise
+      elif attempt < max_retries - 1:
+        wait_time = 2 ** attempt
+        print(f"  Error: {e}, retrying in {wait_time}s...")
+        time_module.sleep(wait_time)
+      else:
+        raise
 
 
 # download_archive('kpdx_zse', 'Oct-01-2021', '0000Z')
