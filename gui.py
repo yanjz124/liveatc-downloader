@@ -22,9 +22,10 @@ class LiveATCDownloaderGUI:
         self.root.resizable(True, True)
         
         self.stations_data = []
+        self.selected_station = None  # Track selected station persistently
         self.downloading = False
         self.download_cancelled = False
-        
+
         self.create_widgets()
         
     def create_widgets(self):
@@ -251,6 +252,7 @@ class LiveATCDownloaderGUI:
         self.search_btn.config(state='disabled')
         self.stations_listbox.delete(0, tk.END)
         self.stations_data = []
+        self.selected_station = None  # Clear selected station on new search
         self.station_info_label.config(text="No station selected", foreground='gray')
         self.download_btn.config(state='disabled')
         
@@ -297,18 +299,21 @@ class LiveATCDownloaderGUI:
         selection = self.stations_listbox.curselection()
         if not selection or not self.stations_data:
             return
-        
+
         idx = selection[0]
         if idx >= len(self.stations_data):
             return
-            
+
         station = self.stations_data[idx]
-        
+
+        # Store selected station persistently
+        self.selected_station = station
+
         # Display station info
         freqs = ", ".join([f"{f['title']} ({f['frequency']})" for f in station['frequencies']])
         status = "ONLINE" if station['up'] else "OFFLINE"
         info = f"ID: {station['identifier']}\nStatus: {status}\nFrequencies: {freqs}"
-        
+
         self.station_info_label.config(text=info, foreground='black')
         self.download_btn.config(state='normal' if station['up'] else 'disabled')
         
@@ -329,13 +334,12 @@ class LiveATCDownloaderGUI:
     
     def start_download(self):
         """Start download process"""
-        # Validate inputs
-        selection = self.stations_listbox.curselection()
-        if not selection or not self.stations_data:
+        # Validate inputs - use persistently stored station instead of current listbox selection
+        if not self.selected_station:
             messagebox.showwarning("No Selection", "Please select a station")
             return
 
-        station = self.stations_data[selection[0]]
+        station = self.selected_station
 
         # Get dates - handle both DateEntry and regular Entry widgets
         if HAVE_CALENDAR:
