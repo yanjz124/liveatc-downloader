@@ -10,12 +10,6 @@ from liveatc import get_stations, download_archive
 import os
 import time
 
-try:
-    from tkcalendar import DateEntry
-    HAVE_CALENDAR = True
-except ImportError:
-    HAVE_CALENDAR = False
-
 
 class LiveATCDownloaderGUI:
     def __init__(self, root):
@@ -107,30 +101,21 @@ class LiveATCDownloaderGUI:
         # Start time
         ttk.Label(time_frame, text="Start:").grid(row=0, column=0, sticky=tk.W, padx=(0, 5))
 
-        if HAVE_CALENDAR:
-            # Use calendar date picker - simplified configuration for compatibility
-            self.start_date_entry = DateEntry(time_frame, width=12,
-                                             date_pattern='mm/dd/y',
-                                             showweeknumbers=False)
-            self.start_date_entry.set_date(current_time)
-        else:
-            # Fallback to text entry
-            self.start_date_entry = ttk.Entry(time_frame, width=12)
-            self.start_date_entry.insert(0, current_time.strftime('%m/%d/%Y'))
+        # Date entry with validation (simpler and more reliable)
+        self.start_date_entry = ttk.Entry(time_frame, width=12, justify='center')
+        self.start_date_entry.insert(0, current_time.strftime('%m/%d/%Y'))
         self.start_date_entry.grid(row=0, column=1, padx=(0, 5))
 
         # Start time - Hour spinbox (00-23)
         self.start_hour = tk.Spinbox(time_frame, from_=0, to=23, width=4, format="%02.0f",
-                                     wrap=True, state='readonly', readonlybackground='white',
-                                     buttonbackground='lightgray')
+                                     wrap=True, justify='center')
         self.start_hour.grid(row=0, column=2, padx=(0, 2))
         self.start_hour.delete(0, tk.END)
         self.start_hour.insert(0, '00')
 
         # Start time - Minute spinbox (00 or 30 only)
-        self.start_minute = tk.Spinbox(time_frame, values=['00', '30'], width=4,
-                                       wrap=True, state='readonly', readonlybackground='white',
-                                       buttonbackground='lightgray')
+        self.start_minute = tk.Spinbox(time_frame, values=('00', '30'), width=4,
+                                       wrap=True, justify='center')
         self.start_minute.grid(row=0, column=3, padx=(0, 2))
         self.start_minute.delete(0, tk.END)
         self.start_minute.insert(0, '00')
@@ -140,32 +125,23 @@ class LiveATCDownloaderGUI:
         # End time
         ttk.Label(time_frame, text="End:").grid(row=0, column=5, sticky=tk.W, padx=(0, 5))
 
-        if HAVE_CALENDAR:
-            # Use calendar date picker - simplified configuration for compatibility
-            self.end_date_entry = DateEntry(time_frame, width=12,
-                                           date_pattern='mm/dd/y',
-                                           showweeknumbers=False)
-            self.end_date_entry.set_date(current_time)
-        else:
-            # Fallback to text entry
-            self.end_date_entry = ttk.Entry(time_frame, width=12)
-            self.end_date_entry.insert(0, current_time.strftime('%m/%d/%Y'))
+        # Date entry with validation (simpler and more reliable)
+        self.end_date_entry = ttk.Entry(time_frame, width=12, justify='center')
+        self.end_date_entry.insert(0, current_time.strftime('%m/%d/%Y'))
         self.end_date_entry.grid(row=0, column=6, padx=(0, 5))
 
         # End time - Hour spinbox (00-23)
         minutes = (current_time.minute // 30) * 30
         rounded_time = current_time.replace(minute=minutes, second=0, microsecond=0)
         self.end_hour = tk.Spinbox(time_frame, from_=0, to=23, width=4, format="%02.0f",
-                                   wrap=True, state='readonly', readonlybackground='white',
-                                   buttonbackground='lightgray')
+                                   wrap=True, justify='center')
         self.end_hour.grid(row=0, column=7, padx=(0, 2))
         self.end_hour.delete(0, tk.END)
         self.end_hour.insert(0, f"{rounded_time.hour:02d}")
 
         # End time - Minute spinbox (00 or 30 only)
-        self.end_minute = tk.Spinbox(time_frame, values=['00', '30'], width=4,
-                                     wrap=True, state='readonly', readonlybackground='white',
-                                     buttonbackground='lightgray')
+        self.end_minute = tk.Spinbox(time_frame, values=('00', '30'), width=4,
+                                     wrap=True, justify='center')
         self.end_minute.grid(row=0, column=8, padx=(0, 2))
         self.end_minute.delete(0, tk.END)
         self.end_minute.insert(0, f"{rounded_time.minute:02d}")
@@ -174,7 +150,7 @@ class LiveATCDownloaderGUI:
 
         # Format help
         row += 1
-        help_text = "Click date to open calendar | Click spinbox arrows to adjust time | Time is in UTC/Zulu" if HAVE_CALENDAR else "Date format: MM/DD/YYYY | Click spinbox arrows to adjust time | Time is in UTC/Zulu"
+        help_text = "Date format: MM/DD/YYYY (e.g. 12/14/2025) | Click spinbox arrows to adjust time | Time is in UTC/Zulu"
         ttk.Label(main_frame, text=help_text,
                  foreground='gray', font=('Arial', 8)).grid(
             row=row, column=0, columnspan=2, sticky=tk.W, pady=(0, 10))
@@ -206,8 +182,7 @@ class LiveATCDownloaderGUI:
             row=0, column=0, sticky=tk.W, padx=(0, 5))
 
         self.thread_count = tk.Spinbox(settings_frame, from_=1, to=10, width=4,
-                                       wrap=True, state='readonly', readonlybackground='white',
-                                       buttonbackground='lightgray')
+                                       wrap=True, justify='center')
         self.thread_count.grid(row=0, column=1, padx=(0, 5))
         self.thread_count.delete(0, tk.END)
         self.thread_count.insert(0, '3')
@@ -371,17 +346,17 @@ class LiveATCDownloaderGUI:
 
         station = self.selected_station
 
-        # Get dates - handle both DateEntry and regular Entry widgets
-        if HAVE_CALENDAR:
-            # Convert mm/dd/y format to Mon-DD-YYYY format for parsing
-            start_date = self.start_date_entry.get_date().strftime('%b-%d-%Y')
-            end_date = self.end_date_entry.get_date().strftime('%b-%d-%Y')
-        else:
-            # Parse mm/dd/yyyy to Mon-DD-YYYY format
-            start_input = self.start_date_entry.get().strip()
-            end_input = self.end_date_entry.get().strip()
+        # Get and validate dates
+        start_input = self.start_date_entry.get().strip()
+        end_input = self.end_date_entry.get().strip()
+
+        try:
             start_date = datetime.strptime(start_input, '%m/%d/%Y').strftime('%b-%d-%Y')
             end_date = datetime.strptime(end_input, '%m/%d/%Y').strftime('%b-%d-%Y')
+        except ValueError:
+            messagebox.showerror("Date Format Error",
+                               "Invalid date format. Please use MM/DD/YYYY\n\nExample: 12/14/2025")
+            return
 
         start_time = f"{self.start_hour.get()}{self.start_minute.get()}Z"
         end_time = f"{self.end_hour.get()}{self.end_minute.get()}Z"
