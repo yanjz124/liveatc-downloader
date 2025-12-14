@@ -113,10 +113,6 @@ class LiveATCDownloaderGUI:
                                              foreground='white', borderwidth=2,
                                              date_pattern='mm-dd-y')
             self.start_date_entry.set_date(current_time)
-            # Make readonly by blocking all keyboard input (only calendar button works)
-            self.start_date_entry.bind('<Key>', lambda e: 'break')
-            self.start_date_entry.bind('<BackSpace>', lambda e: 'break')
-            self.start_date_entry.bind('<Delete>', lambda e: 'break')
         else:
             # Fallback to text entry
             self.start_date_entry = ttk.Entry(time_frame, width=15)
@@ -130,8 +126,6 @@ class LiveATCDownloaderGUI:
         self.start_hour.grid(row=0, column=2, padx=(0, 2))
         self.start_hour.delete(0, tk.END)
         self.start_hour.insert(0, '00')
-        # Block all keyboard input
-        self.start_hour.bind('<Key>', lambda e: 'break')
 
         # Start time - Minute spinbox (00 or 30 only)
         self.start_minute = tk.Spinbox(time_frame, values=['00', '30'], width=4,
@@ -140,8 +134,6 @@ class LiveATCDownloaderGUI:
         self.start_minute.grid(row=0, column=3, padx=(0, 2))
         self.start_minute.delete(0, tk.END)
         self.start_minute.insert(0, '00')
-        # Block all keyboard input
-        self.start_minute.bind('<Key>', lambda e: 'break')
 
         ttk.Label(time_frame, text="Z").grid(row=0, column=4, sticky=tk.W, padx=(0, 15))
 
@@ -154,10 +146,6 @@ class LiveATCDownloaderGUI:
                                            foreground='white', borderwidth=2,
                                            date_pattern='mm-dd-y')
             self.end_date_entry.set_date(current_time)
-            # Make readonly by blocking all keyboard input (only calendar button works)
-            self.end_date_entry.bind('<Key>', lambda e: 'break')
-            self.end_date_entry.bind('<BackSpace>', lambda e: 'break')
-            self.end_date_entry.bind('<Delete>', lambda e: 'break')
         else:
             # Fallback to text entry
             self.end_date_entry = ttk.Entry(time_frame, width=15)
@@ -173,8 +161,6 @@ class LiveATCDownloaderGUI:
         self.end_hour.grid(row=0, column=7, padx=(0, 2))
         self.end_hour.delete(0, tk.END)
         self.end_hour.insert(0, f"{rounded_time.hour:02d}")
-        # Block all keyboard input
-        self.end_hour.bind('<Key>', lambda e: 'break')
 
         # End time - Minute spinbox (00 or 30 only)
         self.end_minute = tk.Spinbox(time_frame, values=['00', '30'], width=4,
@@ -183,14 +169,12 @@ class LiveATCDownloaderGUI:
         self.end_minute.grid(row=0, column=8, padx=(0, 2))
         self.end_minute.delete(0, tk.END)
         self.end_minute.insert(0, f"{rounded_time.minute:02d}")
-        # Block all keyboard input
-        self.end_minute.bind('<Key>', lambda e: 'break')
 
         ttk.Label(time_frame, text="Z").grid(row=0, column=9, sticky=tk.W)
 
         # Format help
         row += 1
-        help_text = "Click date to open calendar | Use arrow keys or click arrows to adjust time | Time is in UTC/Zulu" if HAVE_CALENDAR else "Date format: Dec-11-2025 | Use arrow keys or click arrows to adjust time | Time is in UTC/Zulu"
+        help_text = "Click date to open calendar | Click spinbox arrows to adjust time | Time is in UTC/Zulu" if HAVE_CALENDAR else "Date format: Dec-11-2025 | Click spinbox arrows to adjust time | Time is in UTC/Zulu"
         ttk.Label(main_frame, text=help_text,
                  foreground='gray', font=('Arial', 8)).grid(
             row=row, column=0, columnspan=2, sticky=tk.W, pady=(0, 10))
@@ -227,8 +211,6 @@ class LiveATCDownloaderGUI:
         self.thread_count.grid(row=0, column=1, padx=(0, 5))
         self.thread_count.delete(0, tk.END)
         self.thread_count.insert(0, '3')
-        # Block all keyboard input
-        self.thread_count.bind('<Key>', lambda e: 'break')
 
         ttk.Label(settings_frame, text="threads", font=('Arial', 9)).grid(
             row=0, column=2, sticky=tk.W, padx=(0, 15))
