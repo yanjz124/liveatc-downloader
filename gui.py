@@ -111,7 +111,8 @@ class LiveATCDownloaderGUI:
             # Use calendar date picker with arrow key navigation
             self.start_date_entry = DateEntry(time_frame, width=15, background='darkblue',
                                              foreground='white', borderwidth=2,
-                                             date_pattern='M-dd-yyyy')
+                                             date_pattern='MMM-dd-yyyy',
+                                             state='readonly')
             self.start_date_entry.set_date(current_time)
         else:
             # Fallback to text entry
@@ -121,17 +122,23 @@ class LiveATCDownloaderGUI:
 
         # Start time - Hour spinbox (00-23)
         self.start_hour = tk.Spinbox(time_frame, from_=0, to=23, width=4, format="%02.0f",
-                                     wrap=True, state='readonly', readonlybackground='white')
+                                     wrap=True, state='readonly', readonlybackground='white',
+                                     buttonbackground='lightgray')
         self.start_hour.grid(row=0, column=2, padx=(0, 2))
         self.start_hour.delete(0, tk.END)
         self.start_hour.insert(0, '00')
+        # Block all keyboard input
+        self.start_hour.bind('<Key>', lambda e: 'break')
 
         # Start time - Minute spinbox (00 or 30 only)
         self.start_minute = tk.Spinbox(time_frame, values=['00', '30'], width=4,
-                                       wrap=True, state='readonly', readonlybackground='white')
+                                       wrap=True, state='readonly', readonlybackground='white',
+                                       buttonbackground='lightgray')
         self.start_minute.grid(row=0, column=3, padx=(0, 2))
         self.start_minute.delete(0, tk.END)
         self.start_minute.insert(0, '00')
+        # Block all keyboard input
+        self.start_minute.bind('<Key>', lambda e: 'break')
 
         ttk.Label(time_frame, text="Z").grid(row=0, column=4, sticky=tk.W, padx=(0, 15))
 
@@ -142,7 +149,8 @@ class LiveATCDownloaderGUI:
             # Use calendar date picker with arrow key navigation
             self.end_date_entry = DateEntry(time_frame, width=15, background='darkblue',
                                            foreground='white', borderwidth=2,
-                                           date_pattern='M-dd-yyyy')
+                                           date_pattern='MMM-dd-yyyy',
+                                           state='readonly')
             self.end_date_entry.set_date(current_time)
         else:
             # Fallback to text entry
@@ -154,17 +162,23 @@ class LiveATCDownloaderGUI:
         minutes = (current_time.minute // 30) * 30
         rounded_time = current_time.replace(minute=minutes, second=0, microsecond=0)
         self.end_hour = tk.Spinbox(time_frame, from_=0, to=23, width=4, format="%02.0f",
-                                   wrap=True, state='readonly', readonlybackground='white')
+                                   wrap=True, state='readonly', readonlybackground='white',
+                                   buttonbackground='lightgray')
         self.end_hour.grid(row=0, column=7, padx=(0, 2))
         self.end_hour.delete(0, tk.END)
         self.end_hour.insert(0, f"{rounded_time.hour:02d}")
+        # Block all keyboard input
+        self.end_hour.bind('<Key>', lambda e: 'break')
 
         # End time - Minute spinbox (00 or 30 only)
         self.end_minute = tk.Spinbox(time_frame, values=['00', '30'], width=4,
-                                     wrap=True, state='readonly', readonlybackground='white')
+                                     wrap=True, state='readonly', readonlybackground='white',
+                                     buttonbackground='lightgray')
         self.end_minute.grid(row=0, column=8, padx=(0, 2))
         self.end_minute.delete(0, tk.END)
         self.end_minute.insert(0, f"{rounded_time.minute:02d}")
+        # Block all keyboard input
+        self.end_minute.bind('<Key>', lambda e: 'break')
 
         ttk.Label(time_frame, text="Z").grid(row=0, column=9, sticky=tk.W)
 
@@ -202,10 +216,13 @@ class LiveATCDownloaderGUI:
             row=0, column=0, sticky=tk.W, padx=(0, 5))
 
         self.thread_count = tk.Spinbox(settings_frame, from_=1, to=10, width=4,
-                                       wrap=True, state='readonly', readonlybackground='white')
+                                       wrap=True, state='readonly', readonlybackground='white',
+                                       buttonbackground='lightgray')
         self.thread_count.grid(row=0, column=1, padx=(0, 5))
         self.thread_count.delete(0, tk.END)
         self.thread_count.insert(0, '3')
+        # Block all keyboard input
+        self.thread_count.bind('<Key>', lambda e: 'break')
 
         ttk.Label(settings_frame, text="threads", font=('Arial', 9)).grid(
             row=0, column=2, sticky=tk.W, padx=(0, 15))
